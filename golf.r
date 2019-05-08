@@ -1,10 +1,15 @@
+#Loading libraries
+library("XML")
+library("tidyverse")
+library("stringr")
+library("ggplot2")
+
 # Downloading html
 
 download.file('http://www.lpga.com/statistics/money/official-money?year=2018', destfile=
                 "~/GitHub/ieseDataSciProject/golf.html")
 
 # Players scraped in table 
-library("XML")
 colTypes <- c("numeric","character","character","numeric")
 players <- readHTMLTable("golf.html", colClasses = colTypes, stringsAsFactors = FALSE, as.data.frame = TRUE, which = 1)
 str(players)
@@ -26,7 +31,6 @@ if(dim(playerProfile)[1] == dim(players)[1]){
 }
 
 # Add a player row manually. Row was originally ommitted due to bad link on the website
-library("tibble")
 playerProfile <- add_row(playerProfile,Name = c("wei-ling-hsu"),ID =c("98290"), .after=30)
 
 players <- add_column(players,as.numeric(playerProfile[,2]), .after = 1)
@@ -37,7 +41,6 @@ str(players)
 # Extracting Player Country
 playerCountryImageURLPath <- getHTMLExternalFiles("golf.html", xpQuery = "//img[contains(@src,'countries')]/@src")
 
-library(stringr)
 playerCountries <- toupper(str_match(playerCountryImageURLPath,"countries/(.*[a-z])\\.")[,2])
 
 if(length(playerCountries) == dim(players)[1]){
@@ -52,7 +55,6 @@ names(players)[4] <- c("Country")
 str(players)
 
 # Finding if there is a corellation between money and events played
-library("ggplot2")
 ggplot(data = players, mapping = aes(x=players$`Events Played`, y=players$`Official Money`)) +
   geom_point() +
   scale_y_log10()

@@ -25,6 +25,7 @@ if(dim(playerProfile)[1] == dim(players)[1]){
   print(paste("Number of players found is ", dim(players)[1]," while number of URLs is ",dim(playerProfile)[1]))
 }
 
+# Add a player row manually. Row was originally ommitted due to bad link on the website
 library("tibble")
 playerProfile <- add_row(playerProfile,Name = c("wei-ling-hsu"),ID =c("98290"), .after=30)
 
@@ -38,6 +39,13 @@ playerCountryImageURLPath <- getHTMLExternalFiles("golf.html", xpQuery = "//img[
 
 library(stringr)
 playerCountries <- toupper(str_match(playerCountryImageURLPath,"countries/(.*[a-z])\\.")[,2])
+
+if(length(playerCountries) == dim(players)[1]){
+  print("Numbers match")
+} else {
+  print(paste("Number of players found is ", dim(players)[1]," while number of nationalities is ",length(playerCountries)))
+}
+
 players <- add_column(players,as.factor(playerCountries), .after = "Name")
 names(players)[4] <- c("Country")
 

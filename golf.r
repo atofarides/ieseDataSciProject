@@ -1,7 +1,7 @@
 # Downloading html
 
 download.file('http://www.lpga.com/statistics/money/official-money?year=2018', destfile=
-                "~/AntTofDataSciProject/golf.html")
+                "~/GitHub/ieseDataSciProject/golf.html")
 
 # Players scraped in table 
 library("XML")

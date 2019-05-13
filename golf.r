@@ -6,8 +6,9 @@ library("ggplot2")
 
 # Downloading html
 
+path <- file.path("~","GitHub","ieseDataSciProject","golf.html")
 download.file('http://www.lpga.com/statistics/money/official-money?year=2018', destfile=
-                "~/GitHub/ieseDataSciProject/golf.html")
+                path)
 
 # Players scraped in table 
 colTypes <- c("numeric","character","character","numeric")

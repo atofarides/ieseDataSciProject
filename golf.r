@@ -8,7 +8,8 @@ library("ggplot2")
 # Downloading html
 
 path <- file.path("~","GitHub","ieseDataSciProject","golf.html")
-download.file('http://www.lpga.com/statistics/money/official-money?year=2018', destfile=
+year <- c("2016")
+download.file(paste('http://www.lpga.com/statistics/money/official-money?year=',year), destfile=
                 path)
 
 # Players scraped in table 
@@ -24,23 +25,43 @@ str(players)
 cleanHTML <- sapply(read_lines("golf.html"),str_replace, "(/players/.*) ","\\1-")
 write(cleanHTML, "golfClean.html")
 
-# Extracting player ID
+# Reading HTML nodes 
 golfHTML <- read_html("golfClean.html")
 golfPlayers <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a")
+
+# Identifying missing link attributes
+missingProfileLinks <- which(sapply(html_attrs(golfPlayers),is_empty)) -1
+
+# Extracting player ID 
 golfPlayersURL <- unlist(html_attrs(golfPlayers))
-playersID <- data.frame(matrix(unlist(strsplit(golfPlayersURL,"/")),nrow=length(golfPlayersURL), byrow = TRUE),stringsAsFactors = FALSE) [,4]
+playersID <- matrix(unlist(strsplit(golfPlayersURL,"/")),nrow=length(golfPlayersURL), byrow = TRUE) [,4]
 
-players <- add_column(players,as.numeric(playersID), .after = 1)
-names(players)[2] <- c("ID")
+# Adding NAs for missing profiles
+for (i in missingProfileLinks){
+  playersID <- append(playersID, NA, after = i)
+}
 
+# Adding player ID to main table
+players <- add_column(players,as.numeric(playersID), .after = "Rank")
 str(players)
 
-# Extracting Player Country
-golfPlayersCountries <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a/div/img")
-golfPlayersCountriesURL <- unlist(html_attrs(golfPlayersCountries))
-playerCountries <- toupper(str_match(golfPlayersCountriesURL,"countries/(.*[a-z])\\.")[,2])
+# Reading HTML nodes for country flag links
+golfPlayersCountries <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a/div")
 
-players <- add_column(players,as.factor(playerCountries), .after = "Name")
+# Identifying missing link attributes
+missingCountryLinks <- which(sapply(lapply(golfPlayersCountries,html_children),is_empty)) -1
+
+# Extracting player country
+golfPlayersCountriesURL <- unlist(html_attrs(html_children(golfPlayersCountries)))
+playersCountries <- toupper(str_match(golfPlayersCountriesURL,"countries/(.*[a-z])\\.")[,2])
+
+# Adding NAs for missing profiles
+for (i in missingCountryLinks){
+  playersCountries <- append(playersCountries, NA, after = i)
+}
+
+# Adding Player countries to main table
+players <- add_column(players,as.factor(playersCountries), .after = "Name")
 names(players)[4] <- c("Country")
 
 str(players)

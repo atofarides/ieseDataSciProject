@@ -42,7 +42,8 @@ for (i in missingProfileLinks){
 }
 
 # Adding player ID to main table
-players <- add_column(players,as.numeric(playersID), .after = "Rank")
+players <- add_column(players,as.factor(playersID), .after = "Rank")
+names(players)[2] <- c("ID")
 str(players)
 
 # Reading HTML nodes for country flag links

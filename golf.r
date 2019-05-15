@@ -4,7 +4,6 @@ library("rvest")
 library("tidyverse")
 library("stringr")
 library("ggplot2")
-library("XLConnect")
 
 # Initiate variable
 playersAllYears <- data.frame(

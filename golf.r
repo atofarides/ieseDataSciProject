@@ -17,32 +17,34 @@ playersAllYears <- data.frame(
 )
 
 year <- seq(from = 2018, to = 2000, by = -1)
+#y <- c("2018")
 url <- c('http://www.lpga.com/statistics/money/official-money?year=')
+colTypes <- c("numeric","character","character","numeric")
 
 for (y in year) {
+  print(paste("Processing data for year",y))
 
-  # Downloading html
-  fileName <- paste("golf",y,".html")
-  fileNameClean <- paste("golfClean",y,".html")
-  path <- file.path("~","GitHub","ieseDataSciProject",fileName)
-  download.file(paste(url,y), destfile = path)
+  # Defining working URL 
+  tableURL <- paste(url,y,sep = "")
   
   # Players scraped in table 
-  colTypes <- c("numeric","character","character","numeric")
-  players <- readHTMLTable(fileName, colClasses = colTypes, stringsAsFactors = FALSE, as.data.frame = TRUE, which = 1)
+  players <- readHTMLTable(tableURL, colClasses = colTypes, stringsAsFactors = FALSE, as.data.frame = TRUE, which = 1)
   names(players)[3:4] <- c("OfficialMoney", "EventsPlayed")
-  str(players)
   
   # Converting official money to numeric
   players$`OfficialMoney`<- as.numeric(gsub("\\$|,","",players$`OfficialMoney`))
-  str(players)
   
-  # Identifying errors in player profile links and fixing 
-  cleanHTML <- sapply(read_lines(fileName),str_replace, "(/players/.*) ","\\1-")
-  write(cleanHTML, fileNameClean)
+  # Identifying errors in player profile links, fixing, and writing in new file
+  if (str_detect(read_html(tableURL),"/players/.+ [a-z0-9/-]*>")){
+    print(paste("Errors identified in table of year", y,"... Fixing!"))
+    cleanHTML <- paste(sapply(readLines(tableURL),str_replace, "(/players/.+) ([a-z0-9/-]*>)","\\1-\\2"),collapse="")
+    
+    # Reading HTML nodes 
+    golfHTML <- read_html(cleanHTML)
+  } else {
+    golfHTML <- read_html(tableURL)
+  }
   
-  # Reading HTML nodes 
-  golfHTML <- read_html(fileNameClean)
   golfPlayers <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a")
   
   # Identifying missing link attributes
@@ -60,7 +62,6 @@ for (y in year) {
   # Adding player ID to main table
   players <- add_column(players,as.factor(playersID), .after = "Rank")
   names(players)[2] <- c("ID")
-  str(players)
   
   # Reading HTML nodes for country flag links
   golfPlayersCountries <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a/div")
@@ -81,23 +82,12 @@ for (y in year) {
   players <- add_column(players,as.factor(playersCountries), .after = "Name")
   names(players)[4] <- c("Country")
   
-  str(players)
-  
   # Add year to main table
   
   players <- add_column(players, y, .before = "Rank")
   names(players)[1] <- c("Year")
-  str(players)
   
   playersAllYears <- rbind(playersAllYears, players)
 }
-
+str(playersAllYears)
 write_excel_csv(playersAllYears, file.path("~","GitHub","ieseDataSciProject","playersAllYears.csv"))
-# Finding if there is a corellation between money and events played
-# ggplot(data = players, mapping = aes(x=players$`Events Played`, y=players$`Official Money`)) +
-#  geom_point() +
-#  scale_y_log10()
-
-# cor(players$`Events Played`,players$`Official Money`)
-
-# seems like there is a positive corellation between events played and money made

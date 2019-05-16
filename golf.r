@@ -3,7 +3,6 @@ library("XML")
 library("rvest")
 library("tidyverse")
 library("stringr")
-library("ggplot2")
 
 # Initiate global variables
 playersAllYears <- data.frame(
@@ -31,63 +30,78 @@ for (y in year) {
   names(players)[3:4] <- c("OfficialMoney", "EventsPlayed")
   
   # Converting official money to numeric to enable analysis
-  players$`OfficialMoney`<- as.numeric(gsub("\\$|,","",players$`OfficialMoney`))
+  players$`OfficialMoney`%<>% gsub("\\$|,","",.) %>%
+                            as.numeric()  
   
   # Identifying erroneous spacing in player profile links, fixing
   if (str_detect(read_html(tableURL),"/players/.+ [a-z0-9/-]*>")){
     print(paste("Errors identified in table of year", y,"... Fixing!"))
-    cleanHTML <- paste(sapply(readLines(tableURL),str_replace, "(/players/.+) ([a-z0-9/-]*>)","\\1-\\2"),collapse="")
     
     # Reading HTML nodes 
-    golfHTML <- read_html(cleanHTML)
+    golfHTML <- readLines(tableURL) %>%
+                sapply(.,str_replace, "(/players/.+) ([a-z0-9/-]*>)","\\1-\\2") %>%
+                paste(.,collapse = "") %>%
+                read_html()
   } else {
     golfHTML <- read_html(tableURL)
   }
   
   # Reading profile links 
-  golfPlayers <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a")
+  golfPlayersNodes <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a")
   
   # Identifying missing link attributes
-  missingProfileLinks <- which(sapply(html_attrs(golfPlayers),is_empty)) -1
+  missingProfileLinks <- html_attrs(golfPlayersNodes) %>%
+                        sapply(.,is_empty) %>%
+                        which()-1 
   
   # Extracting player ID 
-  golfPlayersURL <- unlist(html_attrs(golfPlayers))
-  playersID <- matrix(unlist(strsplit(golfPlayersURL,"/")),nrow=length(golfPlayersURL), byrow = TRUE) [,4]
+  playersID <- html_attrs(golfPlayersNodes) %>%
+              unlist() %>%
+              strsplit(.,"/") %>%
+              unlist() %>% 
+              matrix(.,nrow=(length(golfPlayersNodes)-length(missingProfileLinks)), byrow = TRUE)
+  playersID <- playersID[,4]
   
   # Adding NAs for missing profiles
   for (i in missingProfileLinks){
-    playersID <- append(playersID, NA, after = i)
+    playersID %<>% append(., NA, after = i)
   }
   
   # Adding player ID to main table
-  players <- add_column(players,as.factor(playersID), .after = "Rank")
+  players %<>% add_column(.,as.factor(playersID), .after = "Rank")
   names(players)[2] <- c("ID")
   
   # Reading HTML nodes for country flag links
-  golfPlayersCountries <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a/div")
+  golfPlayersCountriesNodes <- html_nodes(golfHTML, xpath = "//tbody/tr/td[contains(@class, 'table-content left')]/a/div")
   
   # Identifying missing link attributes
-  missingCountryLinks <- which(sapply(lapply(golfPlayersCountries,html_children),is_empty)) -1
+  missingCountryLinks <- lapply(golfPlayersCountriesNodes,html_children) %>%
+                        sapply(.,is_empty) %>%
+                        which()-1
   
   # Extracting player country
-  golfPlayersCountriesURL <- unlist(html_attrs(html_children(golfPlayersCountries)))
-  playersCountries <- toupper(str_match(golfPlayersCountriesURL,"countries/(.*[a-z])\\.")[,2])
+  playersCountries <- html_children(golfPlayersCountriesNodes) %>%
+                      html_attrs() %>%
+                      unlist() %>%
+                      str_match(.,"countries/(.*[a-z])\\.") %>%
+                      toupper(.)
+  playersCountries <- playersCountries[,2]
   
   # Adding NAs for missing profiles
   for (i in missingCountryLinks){
-    playersCountries <- append(playersCountries, NA, after = i)
+    playersCountries %<>% append(., NA, after = i)
   }
   
   # Adding Player countries to main table
-  players <- add_column(players,as.factor(playersCountries), .after = "Name")
+  players %<>% add_column(.,as.factor(playersCountries), .after = "Name")
   names(players)[4] <- c("Country")
   
   # Add year to main table
-  players <- add_column(players, y, .before = "Rank")
+  players %<>% add_column(., y, .before = "Rank")
   names(players)[1] <- c("Year")
   
   # Add this years' players to main table
-  playersAllYears <- rbind(playersAllYears, players)
+  playersAllYears %<>% rbind(., players)
 }
 str(playersAllYears)
 write_excel_csv(playersAllYears, file.path("~","GitHub","ieseDataSciProject","playersAllYears.csv"))

@@ -3,6 +3,7 @@ library("XML")
 library("rvest")
 library("tidyverse")
 library("stringr")
+library("magrittr")
 
 # Initiate global variables
 playersAllYears <- data.frame(
@@ -104,4 +105,4 @@ for (y in year) {
   playersAllYears %<>% rbind(., players)
 }
 str(playersAllYears)
-write_excel_csv(playersAllYears, file.path("~","GitHub","ieseDataSciProject","playersAllYears.csv"))
+write_excel_csv(playersAllYears, file.path("~","GitHub","ieseDataSciLPGAProject","playersAllYears.csv"))
